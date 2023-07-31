@@ -1,4 +1,6 @@
 # Stats-Bomb-Functions
+### Author: Luke Julian
+### README Updated: 31/07/2023
 ## Summary
 Created some functions that provide useful statistics, visuals, and easier to understand tables for Stats Bomb's free event data in R.
 ## Libraries
