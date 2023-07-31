@@ -112,4 +112,6 @@ Created some functions that provide useful statistics, visuals, and easier to un
     - Passes attempted
     - Passes completed
 ## Notes
-Hardcoded the directory of the project on my machine in main.R
+- Hardcoded the directory of the project on my machine in main.R
+- Plots are saved as PNG files
+- testing.R is just a mess of code to try out the functions and see how they're working
