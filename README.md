@@ -28,4 +28,39 @@ Created some functions that provide useful statistics, visuals, and easier to un
   - Plots a defensive heatmap of every team a competition for a season
   - Taken directly from the StatsBomb's guide to working with their R library
     - https://statsbomb.com/wp-content/uploads/2021/11/Working-with-R.pdf
-- 
+- plot.Passes_CompletedBox(player_id, player_name, doPlot=T)
+  - player_id: unique id for a desired player
+  - player_name: the actual string name of the player
+  - doPlot: Plot the ggplot if true, only return the plot is false
+  - Plots all of player's completed passes where it was received in the attacking box
+  - Taken directly from the StatsBomb's guide to working with their R library
+    - https://statsbomb.com/wp-content/uploads/2021/11/Working-with-R.pdf
+- get.PPDA(df, tm.id)
+  - df: data.frame of all given events
+    - Generally all the events from a given match
+  - tm.id: unique team id of the desired team
+  - Returns the Passes-Per-Defensive-Action of a team from a given set of events in df
+  - PPDA is defined as opponent passes completed divided by the number of defensive actions made by the team
+    - Defensive actions are:
+      - Attempted tackle
+      - Interception
+      - Foul Committed
+    - Only events that take place in the attacking 60% of the pitch
+    - Great for measuring a team's pressing intensity
+- TODO: get.DefAction.AvgXLoc
+    - See how high up the pitch a team is pressing
+- plot.ball_recoveries(df, plr.id)
+  - df: data.frame of all given events
+  - plr.id: unique player id for the observed player
+  - Useful for finding great ball-winners and defensive midfielders (ie Kante)
+- get.player.positions(df)
+  - df: data.frame of all given events
+  - Get all the positions the players in the data set played
+  - Returns a data.frame with player.id, player.name, and list of positions for each row
+- get.player.primaryPosition(df)
+  - df: data.frame of all given events
+  - Get players' main position
+  - Assuming that the position that a player performs the most recorded events is their primary position
+    - Could be a flawed method
+    - Might be more accurate to use time spent at each position
+    - Current method simpler
