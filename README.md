@@ -98,4 +98,18 @@ Created some functions that provide useful statistics, visuals, and easier to un
   - Nodes represent each player
     - Size of each player node represents number of total passes per90
     - Position is the at the average x and average y of all completed passes
-  - 
+- save.passingNetwork.team_comp(df, tm.id)
+  - df: data.frame of all given events
+  - tm.id: unique team id
+  - Saves passing network plots (see plt.passingNetwork) for all the matches in a team's season into a folder
+- get.match_info(df)
+  - df: data.frame of all given events
+  - Get a data.frame that summarises matches
+  - Stats:
+    - Goals scored
+    - Total xg
+    - Shots attempted
+    - Passes attempted
+    - Passes completed
+## Notes
+Hardcoded the directory of the project on my machine in main.R
