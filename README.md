@@ -115,7 +115,7 @@ Created some functions that provide useful statistics, visuals, and easier to un
     - Passes completed
 ## Notes
 - Guide to StatsBomb event data
-  - https://github.com/statsbomb/open-data/blob/master/doc/Open%20Data%20Matches%20v3.0.0.pdf
+  - https://github.com/statsbomb/open-data/blob/master/doc/StatsBomb%20Open%20Data%20Specification%20v1.1.pdf
 - Hardcoded the directory of the project on my machine in main.R
 - Plots are saved as PNG files
 - testing.R is just a mess of code to try out the functions and see how they're working
