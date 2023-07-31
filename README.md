@@ -64,3 +64,38 @@ Created some functions that provide useful statistics, visuals, and easier to un
     - Could be a flawed method
     - Might be more accurate to use time spent at each position
     - Current method simpler
+- Position utilities:
+  - get.defense.id(): returns the position ids that are defense positions
+  - get.midfield.id(): returns the position ids that are midfield positions
+  - get.attack.id(): returns the position ids that are forward positions
+  - get.positionRectangle(pos.id): used for highlighting a position when plotting on a pitch
+- dist_to_gl(x, y)
+  - Returns the scalar value of how far a pitch location is from the goal line
+  - Used for progressive passes
+- is.boxEntry(x0, y0, x1, y1)
+  - _0: Pass location
+  - _1: Receiver location
+  - Returns a boolean on whether or not a given pass started outside the attacking box and was completed inside it
+- get.progressivePasses(df)
+  - df: data.frame of all given events
+  - Returns a data.frame of the completed pass events (attacking 60% of pitch) with progressive passes recorded as TRUE for a progressive pass and NA when not
+  - There are differing definitions for a progressive pass
+    - The FBref definition is written but commented out
+    - Currently defining a progP as a pass that move the ball at least 25% closer to goal or a box entry. Passes in the defending 40% of the pitch are not included
+- plot.progressivePasses(df)
+  - df: data.frame of all given events
+  - Plot all of the progressive passes in df
+  - Intended for passes by only one player, but works as long as the data set has the pass.progressive feature from get.progressivePasses
+- plot.passingNetwork(df, mt.id, tm)
+  - df: data.frame of all given events
+  - mt.id: unique id for a single match
+  - tm: unique team id
+  - Plots a passing network from a single game
+  - Only of starting eleven; cuts off at first sub for the observed team
+  - Passes scaled to per-90-minutes
+  - Paths between players are drawn when there are at least 5 passes-per90 from player 1 to player 2
+    - Segment width represents passes per 90 from player 1 to player 2
+  - Nodes represent each player
+    - Size of each player node represents number of total passes per90
+    - Position is the at the average x and average y of all completed passes
+  - 
