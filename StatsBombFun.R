@@ -20,26 +20,30 @@ get.competitionEvents <- function(id.c, id.s){
 }
 
 get.minutesplayed.custom <- function(df, match.id=NULL) {
-  # if (unique(df$match_id)>1) {
-  #   match <- df %>% filter(match_id==match.id)
-  # } else {
-  #   match <- df
-  # }
-  start.11.all <- match[match$type.id==35 & match$possession==1,"tactics.lineup"]
+  if (is.null(match.id)) {
+    events <- df
+  } else {
+    events <- df %>% filter(match_id==match.id)
+  }
+  is.extraTime <- length(which(unique(events$period)>2))>0
+  start.11.all <- events[events$type.id==35 & events$possession==1,"tactics.lineup"]
   players.df <- data.frame(
     player.name=c(start.11.all[[1]][[1]]$player.name, start.11.all[[1]][[2]]$player.name),
     player.id=c(start.11.all[[1]][[1]]$player.id, start.11.all[[1]][[2]]$player.id),
     minute.on=rep(0, each=22),
-    minute.off=rep(90, each=22)
+    minute.off=rep(
+      ifelse(is.extraTime, 120, 90), 
+      each=22
+    )
   )
-  subs.all <- match[match$type.id==19,]
+  subs.all <- events[events$type.id==19,]
   for (sub in 1:nrow(subs.all)) {
     sub <-  subs.all[sub,]
     player.new <- data.frame(
       player.name=c(sub$substitution.replacement.name),
       player.id=c(sub$substitution.replacement.id),
       minute.on=c(sub$minute),
-      minute.off=c(90)
+      minute.off=c(ifelse(is.extraTime, 120, 90))
     )
     players.df <- rbind(players.df, player.new)
     players.df[players.df$player.id==sub$player.id,"minute.off"] <- sub$minute
@@ -48,6 +52,21 @@ get.minutesplayed.custom <- function(df, match.id=NULL) {
   return(players.df[,c("player.name", "player.id", "minutes_played")])
 }
 
+get.minutesplayed.total <- function(df) {
+  minutes.all <- NULL
+  for (m.id in unique(df$match_id)) {
+    minutes.match <- get.minutesplayed.custom(df, m.id)
+    if (is.null(minutes.all)) {
+      minutes.all <- minutes.match
+    } else {
+      minutes.all <- rbind(minutes.all, minutes.match)
+    }
+  }
+  minutes.total <- minutes.all %>%
+    group_by(player.id,player.name) %>%
+    summarise(minutes=sum(minutes_played))
+  return(minutes.total)
+}
 
 plot.teamDefense <- function(df, leag_yr, doPlot=T) {
   defensiveactivitycolors <- c("#dc2429", "#dc2329", "#df272d", "#df3238", "#e14348", "#e44d51",
@@ -231,7 +250,13 @@ plot.ball_recoveries <- function(df, plr.id) {
     annotate_pitchSB(colour = "grey", fill = "black") +
     geom_point(aes(x=location.x, y=location.y, col="indianred4")) +
     labs(title = paste(plr.name, paste(nrow(events), "Successful Ball Recoveries"), sep=", ")) + 
-    coord_flip()
+    theme(
+      legend.position = "none",
+      axis.title = element_blank(),
+      panel.background = element_blank(),
+      axis.ticks = element_blank(),
+      axis.text = element_blank()
+    )
   
   
   position.df <- get.player.positions(events) %>% filter(player.id==plr.id)
@@ -243,7 +268,7 @@ plot.ball_recoveries <- function(df, plr.id) {
     rect_coord <- get.positionRectangle(pos.id)
     gplt <- gplt + annotate("rect",xmin = rect_coord[1], xmax = rect_coord[2], ymin =rect_coord[3], ymax = rect_coord[4], fill = "dodgerblue", colour = "dodgerblue", alpha=0.3)
   }  
-  plot(gplt)
+  plot(gplt+coord_flip())
 }
 
 get.player.positions <- function(df) {
@@ -281,37 +306,40 @@ get.position.abbrev <- function(pos.id) {
 get.positionRectangle <- function(pos.id) {
   # c(xmin, xmax, ymin, max)
   if (pos.id==1) {return(c(0, 18, 18, 62))}   # GK
-  else if (pos.id==2) {return(c(18, 34, 0, 18))}   # RB
-  else if (pos.id==3) {return(c(18, 34, 18, 32))}   # RCB
+  else if (pos.id==6) {return(c(18, 34, 0, 18))}   # RB
+  else if (pos.id==5) {return(c(18, 34, 18, 32))}   # RCB
   else if (pos.id==4) {return(c(18, 34, 32, 48))}   # CB
-  else if (pos.id==5) {return(c(18, 34, 48, 62))}   # LCB
-  else if (pos.id==6) {return(c(18, 34, 62, 80))}   # LB
-  else if (pos.id==7) {return(c(34, 50, 0, 18))}   # RWB
-  else if (pos.id==9) {return(c(34, 50, 18, 32))}   # RDM
+  else if (pos.id==3) {return(c(18, 34, 48, 62))}   # LCB
+  else if (pos.id==2) {return(c(18, 34, 62, 80))}   # LB
+  else if (pos.id==8) {return(c(34, 50, 0, 18))}   # RWB
+  else if (pos.id==11) {return(c(34, 50, 18, 32))}   # RDM
   else if (pos.id==10) {return(c(34, 50, 32, 48))}   # CDM
-  else if (pos.id==11) {return(c(34, 50, 48, 62))}   # LDM
-  else if (pos.id==8) {return(c(34, 50, 62, 80))}   # LWB
-  else if (pos.id==12) {return(c(50, 70, 0, 18))}   # RM
-  else if (pos.id==13) {return(c(50, 70, 18, 32))}   # RCM
+  else if (pos.id==9) {return(c(34, 50, 48, 62))}   # LDM
+  else if (pos.id==7) {return(c(34, 50, 62, 80))}   # LWB
+  else if (pos.id==16) {return(c(50, 70, 0, 18))}   # RM
+  else if (pos.id==15) {return(c(50, 70, 18, 32))}   # RCM
   else if (pos.id==14) {return(c(50, 70, 32, 48))}   # CM
-  else if (pos.id==15) {return(c(50, 70, 48, 62))}   # LCM
-  else if (pos.id==16) {return(c(50, 70, 62, 80))}   # LM
-  else if (pos.id==17) {return(c(70, 86, 0, 18))}   # RW
-  else if (pos.id==18) {return(c(70, 86, 18, 32))}   # RAM
+  else if (pos.id==13) {return(c(50, 70, 48, 62))}   # LCM
+  else if (pos.id==12) {return(c(50, 70, 62, 80))}   # LM
+  else if (pos.id==21) {return(c(70, 86, 0, 18))}   # RW
+  else if (pos.id==20) {return(c(70, 86, 18, 32))}   # RAM
   else if (pos.id==19) {return(c(70, 86, 32, 48))}   # CAM
-  else if (pos.id==20) {return(c(70, 86, 48, 62))}   # LAM
-  else if (pos.id==21) {return(c(70, 86, 62, 80))}   # LW
-  else if (pos.id==22) {return(c(102, 120, 18, 32))}   # RCF
+  else if (pos.id==18) {return(c(70, 86, 48, 62))}   # LAM
+  else if (pos.id==17) {return(c(70, 86, 62, 80))}   # LW
+  else if (pos.id==24) {return(c(102, 120, 18, 32))}   # RCF
   else if (pos.id==23) {return(c(102, 120, 32, 48))}   # ST
-  else if (pos.id==24) {return(c(102, 120, 48, 62))}   # LCF
+  else if (pos.id==22) {return(c(102, 120, 48, 62))}   # LCF
   else if (pos.id==25) {return(c(86, 102, 32, 48))}   # SS
   else {return(NULL)}
 }
 
 dist_to_gl <- function(x, y) {
+  if (is.na(x) | is.null(x) | is.na(y) | is.null(y)) {
+    return(NA)
+  }
   touchline <- 120
   min_post <- 36
-  max_post <- 50
+  max_post <- 44
   if (y >= min_post & y <= max_post) {
     return(120-x)
   } else if (y < min_post) {
@@ -333,68 +361,68 @@ is.boxEntry <- function(x0, y0, x1, y1) {
   }
 }
 
-get.progressivePasses <- function(df) {
-  events <- df %>% filter(type.id==30 & is.na(pass.outcome.id) & location.x>=120*0.4 & pass.length >= 10)
-  d2g_0 <- c()
-  d2g_1 <- c()
-  bx.ent <- c()
-  for (i in 1:nrow(events)) {
-    d2g_0 <- c(d2g_0, dist_to_gl(events$location.x[i], events$location.y[i]))
-    d2g_1 <- c(d2g_1, dist_to_gl(events$pass.end_location.x[i], events$pass.end_location.y[i]))
-    bx.ent <- c(bx.ent, is.boxEntry(events$location.x[i], 
-                events$location.y[i], 
-                events$pass.end_location.x[i], 
-                events$pass.end_location.y[i]))
-  }
-  events["location.distToGoal"] <- d2g_0
-  events["pass.end_location.distToGoal"] <- d2g_1
-  events["pass.box_entry"] <- ifelse(bx.ent, TRUE, NA)
-  events["pass.progressive"] <- ifelse((events$pass.end_location.distToGoal / events$location.distToGoal) < 0.75 | !is.na(events$pass.box_entry), TRUE, NA)
-  return(events)
-  # progressive.df <- NULL
-  # for (m.id in unique(events$match_id)) {
-  #   events.match <- events %>% filter(match_id==m.id)
-  #   for (poss in unique(events.match$possession)) {
-  #     isProg <- c()
-  #     events.possession <- events.match %>% filter(possession==poss)
-  #     if (nrow(events.possession)<1) {next}
-  #     for (pass.iter in 1:nrow(events.possession)) {
-  #       if (is.boxEntry(events.possession$location.x[pass.iter], events.possession$location.y[pass.iter], events.possession$pass.end_location.x[pass.iter], events.possession$pass.end_location.y[pass.iter])) {
-  #         isProg <- c(isProg, TRUE)
-  #         next
-  #       }
-  #       if (pass.iter<7) {
-  #         if (pass.iter==1) {
-  #           d0 <- events.possession$location.distToGoal[pass.iter]
-  #           d1 <- events.possession$pass.end_location.distToGoal[pass.iter]
-  #         } else {
-  #           d1 <- events.possession$pass.end_location.distToGoal[pass.iter]
-  #           d0 <- min(events.possession[1:(pass.iter-1),"pass.end_location.distToGoal"])
-  #           d0 <- min(events.possession[1:(pass.iter-1),"location.distToGoal"])
-  #           d0 <- min(c(d0, events.possession$location.distToGoal[pass.iter]))
-  #         }
-  #       } else {
-  #         d1 <- events.possession$pass.end_location.distToGoal[pass.iter]
-  #         d0 <- min(events.possession[(pass.iter-6):(pass.iter-1),"pass.end_location.distToGoal"])
-  #         d0 <- min(events.possession[1:(pass.iter-1),"location.distToGoal"])
-  #         d0 <- min(c(d0, events.possession$location.distToGoal[pass.iter]))
-  #       }
-  #       if ((d1+10) <= d0) {
-  #         isProg <- c(isProg, TRUE)
-  #       } else {
-  #         isProg <- c(isProg, NA)
-  #       }
-  #     }
-  #     events.possession["pass.progressive"] <- isProg
-  #     if (is.null(progressive.df)) {
-  #       progressive.df <- events.possession
-  #     } else {
-  #       progressive.df <-  rbind(progressive.df, events.possession)
-  #     }
-  #   }
-  # }
-  # return(progressive.df)
-}
+# get.progressivePasses <- function(df) {
+#   events <- df %>% filter(type.id==30 & is.na(pass.outcome.id) & location.x>=120*0.4 & pass.length >= 10)
+#   d2g_0 <- c()
+#   d2g_1 <- c()
+#   bx.ent <- c()
+#   for (i in 1:nrow(events)) {
+#     d2g_0 <- c(d2g_0, dist_to_gl(events$location.x[i], events$location.y[i]))
+#     d2g_1 <- c(d2g_1, dist_to_gl(events$pass.end_location.x[i], events$pass.end_location.y[i]))
+#     bx.ent <- c(bx.ent, is.boxEntry(events$location.x[i], 
+#                                     events$location.y[i], 
+#                                     events$pass.end_location.x[i], 
+#                                     events$pass.end_location.y[i]))
+#   }
+#   events["location.distToGoal"] <- d2g_0
+#   events["pass.end_location.distToGoal"] <- d2g_1
+#   events["pass.box_entry"] <- ifelse(bx.ent, TRUE, NA)
+#   events["pass.progressive"] <- ifelse((events$pass.end_location.distToGoal / events$location.distToGoal) < 0.75 | !is.na(events$pass.box_entry), TRUE, NA)
+#   return(events)
+#   # progressive.df <- NULL
+#   # for (m.id in unique(events$match_id)) {
+#   #   events.match <- events %>% filter(match_id==m.id)
+#   #   for (poss in unique(events.match$possession)) {
+#   #     isProg <- c()
+#   #     events.possession <- events.match %>% filter(possession==poss)
+#   #     if (nrow(events.possession)<1) {next}
+#   #     for (pass.iter in 1:nrow(events.possession)) {
+#   #       if (is.boxEntry(events.possession$location.x[pass.iter], events.possession$location.y[pass.iter], events.possession$pass.end_location.x[pass.iter], events.possession$pass.end_location.y[pass.iter])) {
+#   #         isProg <- c(isProg, TRUE)
+#   #         next
+#   #       }
+#   #       if (pass.iter<7) {
+#   #         if (pass.iter==1) {
+#   #           d0 <- events.possession$location.distToGoal[pass.iter]
+#   #           d1 <- events.possession$pass.end_location.distToGoal[pass.iter]
+#   #         } else {
+#   #           d1 <- events.possession$pass.end_location.distToGoal[pass.iter]
+#   #           d0 <- min(events.possession[1:(pass.iter-1),"pass.end_location.distToGoal"])
+#   #           d0 <- min(events.possession[1:(pass.iter-1),"location.distToGoal"])
+#   #           d0 <- min(c(d0, events.possession$location.distToGoal[pass.iter]))
+#   #         }
+#   #       } else {
+#   #         d1 <- events.possession$pass.end_location.distToGoal[pass.iter]
+#   #         d0 <- min(events.possession[(pass.iter-6):(pass.iter-1),"pass.end_location.distToGoal"])
+#   #         d0 <- min(events.possession[1:(pass.iter-1),"location.distToGoal"])
+#   #         d0 <- min(c(d0, events.possession$location.distToGoal[pass.iter]))
+#   #       }
+#   #       if ((d1+10) <= d0) {
+#   #         isProg <- c(isProg, TRUE)
+#   #       } else {
+#   #         isProg <- c(isProg, NA)
+#   #       }
+#   #     }
+#   #     events.possession["pass.progressive"] <- isProg
+#   #     if (is.null(progressive.df)) {
+#   #       progressive.df <- events.possession
+#   #     } else {
+#   #       progressive.df <-  rbind(progressive.df, events.possession)
+#   #     }
+#   #   }
+#   # }
+#   # return(progressive.df)
+# }
 
 plot.progressivePasses <- function(df) {
   events <- df %>% filter(type.id==30 & is.na(pass.outcome.id) & !is.na(pass.progressive) &
@@ -510,13 +538,22 @@ plot.passingNetwork <- function(df, mt.id, tm) {
     }
   }
   gplt <- gplt + geom_point(data = players.locations, aes(x=location.x.avg, y=location.y.avg, size=(pass.per90/10)+10), color="dodgerblue3") 
-  gplt <- gplt + annotate("text", x=players.locations$location.x.avg+1, y=players.locations$location.y.avg, label=sub(".* ", "", players.locations$player.name), color="dodgerblue3")
-
+  gplt <- gplt + annotate("text", 
+                          x=players.locations$location.x.avg+1, 
+                          y=players.locations$location.y.avg, 
+                          label=players.locations$player.name,fontface="bold",
+                          color="black",) +
+                  annotate("text", 
+                           x=players.locations$location.x.avg+1, 
+                           y=players.locations$location.y.avg, 
+                           label=players.locations$player.name,
+                           color="white",)
+# label=sub(".* ", "", players.locations$player.name)
   pass.segments["offset.x"] <- sin(pass.segments$xend-pass.segments$x)*0
   pass.segments["offset.y"] <- cos(pass.segments$yend-pass.segments$y)*0
   gplt <- gplt + geom_segment(data = pass.segments, aes(x=x+offset.x, y=y+offset.y,
                                   xend=xend+offset.x, yend=yend+offset.y),
-                              lineend = "round", size = pass.segments$sz, alpha=0.7, colour = "indianred4", arrow =
+                              lineend = "round", size = pass.segments$sz, alpha=0.4, colour = "indianred4", arrow =
                                 arrow(length = unit(0.07, "inches"), ends = "last", type = "open"))
   opposing.tm.name <- (df %>% filter(match_id==mt.id & team.id!=tm))$team.name
   gplt <- gplt + 
@@ -535,7 +572,7 @@ plot.passingNetwork <- function(df, mt.id, tm) {
   gplt <- gplt + coord_flip()
   gplt <- gplt + facet_wrap(~match_id)
   plot(gplt)
-  return(gplt)
+  #return(gplt)
 }
 
 save.passingNetwork.team_comp <- function(df, tm.id, comp="") {
@@ -550,7 +587,7 @@ save.passingNetwork.team_comp <- function(df, tm.id, comp="") {
 }
 
 get.match_info <-  function(df) {
-  events <- df
+  events <- df %>% filter(period<5)
   
   events["unit.goal"] <- ifelse(!is.na(events$shot.outcome.id) & events$shot.outcome.id==97, 1, 0)
   events["unit.shot"] <- ifelse(!is.na(events$type.id) & events$type.id==16, 1, 0)
@@ -569,7 +606,8 @@ get.match_info <-  function(df) {
         xG=sum(shot.statsbomb_xg),
         shots=sum(unit.shot),
         pass.attempts=sum(unit.pass),
-        pass.completed=sum(unit.pass.comp)
+        pass.completed=sum(unit.pass.comp),
+        extraTime=length(which(unique(period)>2))>0
       ),
     by=c("match_id", "team.id")
   )
@@ -585,12 +623,285 @@ get.match_info <-  function(df) {
   for (i in 1:nrow(matches)) {
     md <- matches$match_id[i]
     tm <- matches$team.id[i]
-    per <- match.info[match.info$match_id==md & match.info$team.id==tm,"TimeInPoss"] / 
-      (match.info[match.info$match_id==md & match.info$team.id==tm,"TimeInPoss"] + 
-         match.info[match.info$match_id==md & match.info$team.id!=tm,"TimeInPoss"])
-    poss.per <- c(poss.per, per)
+    # per <- match.info[match.info$match_id==md & match.info$team.id==tm,"TimeInPoss"] / 
+    #   (match.info[match.info$match_id==md & match.info$team.id==tm,"TimeInPoss"] + 
+    #      match.info[match.info$match_id==md & match.info$team.id!=tm,"TimeInPoss"])
+    # poss.per <- c(poss.per, per)
   }
   matches["possesion.percentage"] <- poss.per
   
-  return(matches %>% select(match_id, team.id, team.name, goals, xG, shots, pass.attempts, pass.completed))
+  return(matches %>% select(match_id, extraTime, team.id, team.name, goals, xG, shots, pass.attempts, pass.completed))
+}
+
+to.per90 <- function(df, minMin=180) {
+  df.90 <- df %>% filter(minutes>minMin)
+  for (name in names(df.90)) {
+    if (name=="minutes" | 
+        grepl("player",name) |
+        grepl(".id",name) | 
+        grepl("position",name)) {
+      next
+    } else if (is.numeric(df.90[,name])) {
+      df.90[name] <- (df.90[name]/df.90$minutes)*90
+    }
+  }
+  df.90["X90s"] <- df.90$minutes/90
+  return(df.90)
+}
+
+# get.progressive.carry <- function(df) {
+#   events <- df %>% filter(!is.na(location) & !unlist(lapply(location, is.null)))
+#   d2g <- c()
+#   for (i in 1:nrow(events)) {
+#     d2g <- c(d2g, dist_to_gl(events$location.x[i], events$location.y[i]))
+#   }
+#   events["distToGoal"] <- d2g
+#   
+#   carry <- events %>% filter(type.id==43 & carry.end_location.x<60)
+#   prog.carry <- c()
+#   for (i in 1:nrow(carry)) {
+#     end.dist <- dist_to_gl(carry$carry.end_location.x[i], carry$carry.end_location.y[i])
+#     start.dist <- carry$distToGoal[i]
+#     p.dist <- end.dist - start.dist
+#     related.events <- events %>% 
+#       filter(id %in% carry$related_events[i] & index < carry$index[i])
+#     if (nrow(related.events)<6) {
+#       recent.dist <- min(related.events$distToGoal)
+#     } else if (nrow(related.events)>0) {
+#       recent.dist <- min(related.events$distToGoal[nrow(related.events)-5:nrow(related.events)])
+#     } else {
+#       recent.dist <- Inf
+#     }
+#     furthest.start <- min(c(start.dist, recent.dist))
+#     
+#     bx.ent <- is.boxEntry(carry$location.x[i], 
+#                           carry$location.y[i], 
+#                           carry$carry.end_location.x[i], 
+#                           carry$carry.end_location.y[i])
+#     
+#     if (end.dist+10 < furthest.start | bx.ent) {
+#       prog.carry <- c(prog.carry, TRUE)
+#     } else {
+#       prog.carry <- c(prog.carry, NA)
+#     }
+#   }
+#   carry["carry.progressive"] <- prog.carry
+#   return(carry)
+# }
+
+get.progressive <- function(df, category_name) {
+  category <- tolower(category_name)
+  endloc.x <- paste(category, "end_location.x", sep=".")
+  endloc.y <- paste(category, "end_location.y", sep=".")
+  
+  events <- df %>% filter(!is.na(location) & !unlist(lapply(location, is.null)))
+  # d2g <- c()
+  # for (i in 1:nrow(events)) {
+  #   d2g <- c(d2g, dist_to_gl(events$location.x[i], events$location.y[i]))
+  # }
+  # events["distToGoal"] <- d2g
+  events["distToGoal"] <- mapply(dist_to_gl, events$location.x, events$location.y)
+  endDist <- paste(category, "end_distToGoal", sep=".")
+  events[endDist] <- mapply(dist_to_gl, pull(events[,endloc.x]), pull(events[,endloc.y]))
+  
+  filter.events <- events %>% 
+    filter(type.name==category_name)
+  prog <- c()
+  prog.distance <- c()
+  for (i in 1:nrow(filter.events)) {
+    if (filter.events[i,endloc.x]<60) {
+      prog <- c(prog, NA)
+      prog.distance <- c(prog.distance, NA)
+      next
+    }
+    # end.dist <- dist_to_gl(
+    #   filter.events[i,endloc.x], 
+    #   filter.events[i,endloc.y]
+    # )
+    end.dist <- filter.events[i,endDist]
+    start.dist <- filter.events$distToGoal[i]
+    p.dist <- end.dist - start.dist
+    related.events <- events %>% 
+      filter(id %in% filter.events$related_events[i] & index < filter.events$index[i])
+    if (nrow(related.events)<6) {
+      if (nrow(related.events)==0) {recent.dist <- Inf}
+      else {recent.dist <- min(related.events$distToGoal)}
+    } else if (nrow(related.events)>0) {
+      recent.dist <- min(related.events$distToGoal[nrow(related.events)-5:nrow(related.events)])
+    } else {
+      
+    }
+    furthest.start <- min(c(start.dist, recent.dist))
+    
+    bx.ent <- is.boxEntry(filter.events$location.x[i], 
+                          filter.events$location.y[i], 
+                          filter.events[i,endloc.x], 
+                          filter.events[i,endloc.y])
+    
+    if (end.dist+10 < furthest.start | bx.ent) {
+      prog <- c(prog, TRUE)
+      prog.distance <- c(prog.distance, furthest.start-end.dist)
+    } else {
+      prog <- c(prog, NA)
+      prog.distance <- c(prog.distance, NA)
+    }
+  }
+  filter.events[,paste(category,"progressive",sep=".")] <- prog
+  filter.events[,paste(category,"progressive.distance",sep=".")] <- unlist(prog.distance)
+  
+  return(filter.events)
+}
+
+compile.individualStats <- function(df, carry.events=NULL, pPass.events=NULL) {
+  if (is.null(carry.events)) {carry.events <- get.progressive(df,"Carry")}
+  if (is.null(pPass.events)) {pPass.events <- get.progressive(df,"Pass")}
+  
+  events.ind <- merge(
+    carry.events %>% group_by(player.id,team.id,player.name,team.name) %>%
+      summarise(pC=count.createdEvent.col(carry.progressive),pC.distance=sum(carry.progressive.distance)),
+    pPass.events %>% group_by(player.id,team.id,player.name,team.name) %>%
+      summarise(pP=count.createdEvent.col(pass.progressive),pP.distance=sum(pass.progressive.distance)),
+    by=c("player.id","team.id","player.name","team.name")
+  )
+
+  minutes.events <- get.minutesplayed.total(df)
+  events.ind <- merge(
+    minutes.events,
+    events.ind,
+    by=c("player.id","player.name")
+  )
+  events.ind <- merge(
+    events.ind,
+    get.player.primaryPosition(df),
+    by="player.id"
+  )
+  return(events.ind)
+}
+
+count.createdEvent.df <- function(df, name) { return(length(which(!is.na(carry.wwc[,name])))) }
+
+count.createdEvent.col <- function(col) { return(length(which(!is.na(col)))) }
+
+get.dribbles.df <- function(df) {
+  #summarise(pC=count.createdEvent.col(carry.progressive)
+  events <- df %>% filter(type.id==14) %>%
+    group_by(player.id,player.name,team.name,team.id) %>%
+    summarise(
+      dribble.attempted=length(id),
+      dribble.completed=length(which(dribble.outcome.id==8))
+    )
+  return(events)
+}
+
+# https://theanalyst.com/na/2021/03/possessions-and-sequences-in-football/
+get.sequence_directSpeed.match <- function(df, m.id, t.id, forSeason=F) {
+  events <- df %>% filter(match_id==m.id & 
+                            !lapply(df$location, is.null) %>% unlist() &
+                            !type.id %in% c(36,35) &
+                            !is.na(possession_team.id) & 
+                            possession_team.id==t.id)
+  events["distToGoal"] <- mapply(dist_to_gl, events$location.x, events$location.y)
+  distances <- c()
+  times_ <- c()
+  for (p in events$possession %>% unique()) {
+    poss <- events %>% filter(possession==p)
+    seq.break <- which(!poss$type.id %in% c(42,43,14,30,16))
+    if (length(seq.break)==nrow(poss)) {
+      next
+    } else if (length(seq.break)==0) {
+      distance <- poss$distToGoal[1] - poss$distToGoal[nrow(poss)]
+      time_ <- poss$TimeInPoss[nrow(poss)] - poss$TimeInPoss[1]
+      distances <- c(distances, distance)
+      times_ <- c(times_, time_)
+      next
+    } else {seq.break <- order(seq.break)}
+    
+    for (ind in 1:length(seq.break)) {
+      i <- seq.break[ind]
+      if (i==1) {
+        next
+      } else if (ind>1 | i-1==seq.break[ind-1]) {
+        next
+      } else if (ind==1) {
+        seq_ <- poss[1:i,]
+      } else {
+        seq_ <- poss[seq.break[ind-1]:i,]
+      }
+      distance <- seq_$distToGoal[1] - seq_$distToGoal[nrow(seq_)]
+      if (is.na(distance)) {next}
+      time_ <- seq_$TimeInPoss[nrow(seq_)] - seq_$TimeInPoss[1]
+      distances <- c(distances, distance)
+      times_ <- c(times_, time_)
+    }
+  }
+  if (forSeason) {
+    return(data.frame(d=distances, t=times_))
+  } else {
+    # direct1 <- mean(distances/times_)
+    direct2 <- sum(distances) / sum(times_)
+    return(direct2)
+  }
+}
+
+get.sequence_direct <- function(df, t.id) {
+  match.ids <- df %>% filter(team.id==t.id) %>% select(match_id) %>% unique() %>% pull()
+  dir.df <- NULL
+  for (m.id in match.ids) {
+    if (is.null(dir.df)) {
+      dir.df <- get.sequence_directSpeed.match(df,m.id,t.id,forSeason=T)
+    } else {
+      dir.df <- rbind(
+        dir.df,
+        get.sequence_directSpeed.match(df,m.id,t.id,forSeason=T)
+      )
+    }
+  }
+  return(dir.df)
+}
+
+get.directness.competition <- function(df) {
+  direct <- data.frame(team.id=unique(df$team.id))
+  spd <- c()
+  dir <- c()
+  for (tm.id in direct$team.id) {
+    dir.df <- get.sequence_direct(df,tm.id)
+    spd <- c(spd, sum(dir.df$d) / sum(dir.df$t))
+    # spd <- c(spd, mean(dir.df$d / dir.df$t))
+    dir <- c(
+      dir, 
+      nrow(
+        df %>% 
+          filter(team.id==tm.id & !is.na(pass.outcome.id))
+      ) / 
+      nrow(dir.df)
+    )
+  }
+  direct["yards.sec"] <- spd
+  direct["pass.seq"] <- dir
+  direct <- merge(
+    direct,
+    df %>%
+      group_by(team.name,team.id) %>% 
+      summarise(games=length(unique(match_id))),
+    by="team.id"
+  )
+  return(direct)
+}
+
+plot.directness.competition <- function(df, title="Directness") {
+  direct <- get.directness.competition(df)
+  gplt <- ggplot(direct, aes(x=pass.seq,y=yards.sec,label=team.name,size=(games/2)+1)) +
+    theme_dark() +
+    geom_point() +
+    geom_hline(aes(yintercept=mean(direct$yards.sec)), alpha=0.25) +
+    geom_vline(aes(xintercept=mean(direct$pass.seq)), alpha=0.25) +
+    geom_text_repel(size=3, color="white") +
+    xlab("Passes per sequence") +
+    ylab("Progressive Yards per Second") +
+    labs(title = title) +
+    theme(
+      legend.position = "none",
+      plot.background = element_rect(fill = 'snow2', color = 'grey')
+    )
+  plot(gplt)
 }
