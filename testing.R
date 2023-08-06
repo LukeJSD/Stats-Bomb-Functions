@@ -221,5 +221,6 @@ write.csv(apply(pPass.weuro.22,2,as.character),"Data/Prog/weuro22_pPass")
 
 
 
-
+pp <- pPass.wc.22 %>% filter(!is.na(pass.progressive))
+min(pp$pass.angle)
 

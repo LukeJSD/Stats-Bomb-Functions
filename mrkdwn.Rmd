@@ -8,18 +8,16 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, fig.height = 4)
 setwd("C:/users/luke/Personal_Projects/Soccer/stats_bomb/")
 source("StatsBombFun.R")
 library(ggplot2)
 library(ggrepel)
 ```
 
-## R Markdown
+## Intorduction
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Data courtesy of *StatsBomb*. Data used for this document is from the 2018 and 2022 Men's World Cups, the 2019 Women's world Cup, and the 2022 Women's Euros.
 
 ```{r Read In Event Data, results='hide', message=FALSE, warning=FALSE}
 events.wc.22 <- allclean(get.competitionEvents(43,106))
@@ -78,17 +76,27 @@ wc.18.ind <- compile.individualStats(events.wc.18,carry.wc.18,pPass.wc.18)
 
 wwc.19.ind <- compile.individualStats(events.wwc.19,carry.wwc.19,pPass.wwc.19)
 weuro.22.ind <- compile.individualStats(events.weuro.22,carry.weuro.22,pPass.weuro.22)
+```
 
+```{r message=FALSE, warning=FALSE}
+am.wc.22 <- get.attacking_ballMovement_stats.ind(events.wc.22) %>% filter(player.id %in% wc.22.ind$player.id)
+wc.22.ind <- merge(wc.22.ind, am.wc.22, by=c("player.id","player.name","team.name"))
+am.wc.18 <- get.attacking_ballMovement_stats.ind(events.wc.18) %>% filter(player.id %in% wc.18.ind$player.id)
+wc.18.ind <- merge(wc.18.ind, am.wc.18, by=c("player.id","player.name","team.name"))
+
+am.wwc.19 <- get.attacking_ballMovement_stats.ind(events.wwc.19) %>% filter(player.id %in% wwc.19.ind$player.id)
+wwc.19.ind <- merge(wwc.19.ind, am.wwc.19, by=c("player.id","player.name","team.name"))
+am.weuro.22 <- get.attacking_ballMovement_stats.ind(events.weuro.22) %>% filter(player.id %in% weuro.22.ind$player.id)
+weuro.22.ind <- merge(weuro.22.ind, am.weuro.22, by=c("player.id","player.name","team.name"))
+```
+
+```{r}
 wc.18.ind.90 <- to.per90(wc.18.ind)
 wc.22.ind.90 <- to.per90(wc.22.ind)
 
 wwc.19.ind.90 <- to.per90(wwc.19.ind)
 weuro.22.ind.90 <- to.per90(weuro.22.ind)
 ```
-
-# Progressive Play
-
-A progressive action is one that advances the ball 10 yards closer to goal than than to furthest it has been in the last 6 relevant events in the sequence of play, or when the ball in entered into the 18 yard box. The the common actions that can be considered progressive are passes (pP) and carries (pC).
 
 ```{r, echo=FALSE}
 wc.22.ind.90["pos_group.name"] <- ifelse(
@@ -152,6 +160,10 @@ weuro.22.ind.90["pos_group.name"] <- ifelse(
 weuro.22.ind.90 <- weuro.22.ind.90 %>% filter(position.primary!=1)
 ```
 
+# Progressive Play
+
+A progressive action is one that advances the ball 10 yards closer to goal than than to furthest it has been in the last 6 relevant events in the sequence of play, or when the ball in entered into the 18 yard box. The the common actions that can be considered progressive are passes (pP) and carries (pC).
+
 ##### Progressive summary of players at the 2022 World Cup
 
 ```{r}
@@ -166,7 +178,7 @@ summary(wc.18.ind.90 %>% arrange(desc(pC)) %>% select(pC,pP,X90s))
 
 ### Progression at the 2022 World Cup
 
-```{r echo=TRUE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+```{r fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
 mPC <- max(wc.18.ind.90$pC, wc.22.ind.90$pC, wwc.19.ind.90$pC, weuro.22.ind.90$pC)
 mPP <- max(wc.18.ind.90$pP, wc.22.ind.90$pP, wwc.19.ind.90$pP, weuro.22.ind.90$pP)
 
@@ -192,6 +204,7 @@ gplt <- ggplot(wc.22.ind.90,
   xlab("Progressive-Passes per 90") +
   scale_colour_discrete(name="Nation") + 
   scale_shape_discrete(name="Postion") +
+  guides(fill=guide_legend(ncol=3)) +
   coord_fixed(max(wc.22.ind.90$pP)/max(wc.22.ind.90$pC))
 plot(gplt)
 ```
@@ -226,9 +239,9 @@ plot(gplt)
 gplt <- ggplot(wwc.19.ind.90, 
                aes(y=pC,
                    x=pP,
-                   label=paste(player.name,team.name,sep='\n'),
+                   label=paste(player.name,sub(" Women's", "", team.name),sep='\n'),
                    shape=factor(pos_group.name),
-                   color=factor(team.name)
+                   color=factor(sub(" Women's", "", team.name))
                   )
               ) +
   ylim(0, mPC) +
@@ -240,6 +253,7 @@ gplt <- ggplot(wwc.19.ind.90,
   xlab("Progressive-Passes per 90") +
   scale_colour_discrete(name="Nation") + 
   scale_shape_discrete(name="Postion") +
+  guides(fill=guide_legend(ncol=2)) +
   coord_fixed(max(wwc.19.ind.90$pP)/max(wwc.19.ind.90$pC))
 plot(gplt)
 ```
@@ -250,9 +264,9 @@ plot(gplt)
 gplt <- ggplot(weuro.22.ind.90, 
                aes(y=pC,
                    x=pP,
-                   label=paste(player.name,team.name,sep='\n'),
+                   label=paste(player.name,sub(" Women's", "", team.name),sep='\n'),
                    shape=factor(pos_group.name),
-                   color=factor(team.name)
+                   color=factor(sub(" Women's", "", team.name))
                   )
               ) +
   ylim(0, mPC) +
@@ -264,16 +278,18 @@ gplt <- ggplot(weuro.22.ind.90,
   xlab("Progressive-Passes per 90") +
   scale_colour_discrete(name="Nation") + 
   scale_shape_discrete(name="Postion") +
+  guides(fill=guide_legend(ncol=2)) +
   coord_fixed(max(weuro.22.ind.90$pP)/max(weuro.22.ind.90$pC))
 plot(gplt)
 ```
 
-Fun little observation: Mapi Leon, the Spanish defender responsible for the most progressive passes and over 5 progressive carries per 90 at Euro22, is one of the exiled players from Jorge Vilda's World Cup squad. While the group of players has, she is one of the group refusing to play for the national team while Vilda remains its manager.
+Fun little observation: Mapi Leon, the Spanish defender responsible for the most progressive passes and over 5 progressive carries per 90 at Euro22, is one of the exiled players from Jorge Vilda's World Cup squad. While the group of players has dwindled, she is one of the group refusing to play for the national team while Vilda remains its manager.
 
-## Direct Team Play
+## Directness
+
+### Team Play
 
 Directness of play can be measured by the speed at which a team progresses the ball. The directness of a sequence play (a sequence being connsecutive attacking actions, such as passes, carries, dribbles, shots) is the progressed distance from the first event in the sequence to the last per second (so divided by the duration of the sequence). The intricacy of team also relates to how direct they play, which is simply the number of passes per sequence. Generally less direct teams pass more, opting from to patiently move the ball backwards and side to side.
-
 
 ```{r echo=F, fig.height=4, fig.width=7.5, message=FALSE, warning=FALSE}
 plot.directness.competition(events.wc.22, title = "Directness of Teams at the 2022 World Cup")
@@ -290,6 +306,159 @@ plot.directness.competition(events.wwc.19, title = "Directness of Teams at the 2
 ```{r echo=F, fig.height=4, fig.width=7.5, message=FALSE, warning=FALSE}
 plot.directness.competition(events.weuro.22, title = "Directness of Teams at the 2022 Women's Euros")
 ```
+
+### Attacks
+
+A direct attack is a possession starting in the defensive half in which over half the offensive actions move the ball closer to the goal.
+
+```{r fig.height=4, message=FALSE, warning=FALSE}
+da.wc.22 <- get.directAttacks(events.wc.22) %>%
+  group_by(team.id,team.name) %>%
+  summarise(
+    matches = length(unique(match_id)),
+    direct.attacks = length(which(directAttack)),
+    direct.goals = length(which(directAttack & goal)),
+    direct.attacks.percent = length(which(directAttack)) / length(directAttack),
+    direct.goals.percent = length(which(directAttack & goal)) / 
+      length(which(goal))
+  )
+
+gplt <- ggplot(da.wc.22, 
+               aes(
+                 x=direct.attacks/matches, y=direct.attacks.percent, label=team.name
+               )) +
+  geom_point() +
+  geom_text_repel(color="white") +
+  xlab("Direct Attacks per Match") + ylab("% of Shots from Direct Attacks") +
+  labs(title = "2022 World Cup") + 
+    geom_hline(aes(yintercept=mean(direct.attacks.percent)), alpha=0.35, color="snow2") +
+  geom_vline(aes(xintercept=mean(direct.attacks/matches)), alpha=0.35, color="snow2") +
+  theme_dark()
+plot(gplt)
+```
+
+```{r fig.height=4, message=FALSE, warning=FALSE}
+da.wc.18 <- get.directAttacks(events.wc.18) %>%
+  group_by(team.id,team.name) %>%
+  summarise(
+    matches = length(unique(match_id)),
+    direct.attacks = length(which(directAttack)),
+    direct.goals = length(which(directAttack & goal)),
+    direct.attacks.percent = length(which(directAttack)) / length(directAttack),
+    direct.goals.percent = length(which(directAttack & goal)) / 
+      length(which(goal))
+  )
+
+gplt <- ggplot(da.wc.18, 
+               aes(
+                 x=direct.attacks/matches, y=direct.attacks.percent, label=team.name
+               )) +
+  geom_point() +
+  geom_text_repel(color="white") +
+  xlab("Direct Attacks per Match") + ylab("% of Shots from Direct Attacks") +
+  labs(title = "2018 World Cup") + 
+  geom_hline(aes(yintercept=mean(direct.attacks.percent)), alpha=0.35, color="snow2") +
+  geom_vline(aes(xintercept=mean(direct.attacks/matches)), alpha=0.35, color="snow2") +
+  theme_dark()
+plot(gplt)
+```
+
+```{r fig.height=4, message=FALSE, warning=FALSE}
+da.wwc.19 <- get.directAttacks(events.wwc.19) %>%
+  group_by(team.id,team.name) %>%
+  summarise(
+    matches = length(unique(match_id)),
+    direct.attacks = length(which(directAttack)),
+    direct.goals = length(which(directAttack & goal)),
+    direct.attacks.percent = length(which(directAttack)) / length(directAttack),
+    direct.goals.percent = length(which(directAttack & goal)) / 
+      length(which(goal))
+  )
+
+gplt <- ggplot(da.wwc.19, 
+               aes(
+                 x=direct.attacks/matches, y=direct.attacks.percent, label=sub(" Women's", "", team.name)
+               )) +
+  geom_point() +
+  geom_text_repel(color="white") +
+  xlab("Direct Attacks per Match") + ylab("% of Shots from Direct Attacks") +
+  labs(title = "2019 World Cup") + 
+  geom_hline(aes(yintercept=mean(direct.attacks.percent)), alpha=0.35, color="snow2") +
+  geom_vline(aes(xintercept=mean(direct.attacks/matches)), alpha=0.35, color="snow2") +
+  theme_dark()
+plot(gplt)
+```
+
+```{r fig.height=4, message=FALSE, warning=FALSE}
+da.weuro.22 <- get.directAttacks(events.weuro.22) %>%
+  group_by(team.id,team.name) %>%
+  summarise(
+    matches = length(unique(match_id)),
+    direct.attacks = length(which(directAttack)),
+    direct.goals = length(which(directAttack & goal)),
+    direct.attacks.percent = length(which(directAttack)) / length(directAttack),
+    direct.goals.percent = length(which(directAttack & goal)) / 
+      length(which(goal))
+  )
+
+gplt <- ggplot(da.weuro.22, 
+               aes(
+                 x=direct.attacks/matches, y=direct.attacks.percent, label=sub(" Women's", "", team.name)
+               )) +
+  geom_point() +
+  geom_text_repel(color="white") +
+  xlab("Direct Attacks per Match") + ylab("% of Shots from Direct Attacks") +
+  labs(title = "2022 Euros") + 
+  geom_hline(aes(yintercept=mean(direct.attacks.percent)), alpha=0.35, color="snow2") +
+  geom_vline(aes(xintercept=mean(direct.attacks/matches)), alpha=0.35, color="snow2") +
+  theme_dark()
+plot(gplt)
+```
+
+### Forward Movement
+
+#### 2022 World Cup
+```{r}
+gplt <- ggplot(wc.22.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+  geom_point() +
+  geom_text_repel() +
+  scale_color_continuous(name="Pass vs Carry") + 
+  scale_shape_discrete(name="Postion")
+plot(gplt)
+```
+
+#### 2018 World Cup
+```{r}
+gplt <- ggplot(wc.18.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+  geom_point() +
+  geom_text_repel() +
+  scale_color_continuous(name="Pass vs Carry") + 
+  scale_shape_discrete(name="Postion")
+plot(gplt)
+```
+
+#### 2019 World Cup
+
+```{r}
+gplt <- ggplot(wwc.19.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+  geom_point() +
+  geom_text_repel() +
+  scale_color_continuous(name="Pass vs Carry") + 
+  scale_shape_discrete(name="Postion")
+plot(gplt)
+```
+
+#### 2022 Euros
+
+```{r}
+gplt <- ggplot(weuro.22.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+  geom_point() +
+  geom_text_repel() +
+  scale_color_continuous(name="Pass vs Carry") + 
+  scale_shape_discrete(name="Postion")
+plot(gplt)
+```
+
 
 # Passing Networks
 
@@ -335,7 +504,7 @@ events.br["unit"] <- rep(1, each=nrow(events.br))
 br.plr.count <- events.br %>% group_by(player.id, player.name, team.name) %>% 
   summarise(total_br=sum(unit)) %>% 
   arrange(desc(total_br))
-print(br.plr.count)
+br.plr.count
 plot.ball_recoveries(events.wc.18, 3961)
 plot.ball_recoveries(events.wc.18, 5463)
 plot.ball_recoveries(events.wc.18, 3089)
@@ -345,7 +514,7 @@ plot.ball_recoveries(events.wc.18, 5485)
 ### PPDA
 PPDA (Passes Per Defensive Action) is probably the leading statistic in measuring a teams the intensity and effectiveness of a teams high press. Looking only at the attcking 60% of the pitch, PPDA is calculated by dividing the total passes of the opposition by the total number of defensive actions (tackle attempts, interceptions, and fouls committed) perform. Lower the PPDA that teams emphasize pressuring there opposition with urgency high up the pitch. Higher PPDA shows that a team is content sitting back and on letting the opposition come to them.
 
-```{r}
+```{r fig.height=4}
 ppda.all <- c()
 for (tm.id in unique(events.weuro.22$team.id)) {ppda.all<-c(ppda.all,get.PPDA(events.weuro.22,tm.id))}
 ppda.teams <- merge(
@@ -353,7 +522,7 @@ ppda.teams <- merge(
   data.frame(team.id=unique(events.weuro.22$team.id), ppda=ppda.all),
   by="team.id"
 ) %>% arrange(ppda)
-gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=team.name)) +
+gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=sub(" Women's", "", team.name))) +
   geom_col() +
   geom_text(angle=90, hjust="left", y=0.1, color="white") +
   theme(
@@ -367,7 +536,7 @@ gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=team.name)) +
 plot(gplt)
 ```
 
-```{r, echo=FALSE}
+```{r echo=FALSE, fig.height=4}
 ppda.all <- c()
 for (tm.id in unique(events.wwc.19$team.id)) {ppda.all<-c(ppda.all,get.PPDA(events.wwc.19,tm.id))}
 ppda.teams <- merge(
@@ -375,7 +544,7 @@ ppda.teams <- merge(
   data.frame(team.id=unique(events.wwc.19$team.id), ppda=ppda.all),
   by="team.id"
 ) %>% arrange(ppda)
-gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=team.name)) +
+gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=sub(" Women's", "", team.name))) +
   geom_col() +
   geom_text(angle=90, hjust="left", y=0.1, color="white") +
   theme(
@@ -389,7 +558,7 @@ gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=team.name)) +
 plot(gplt)
 ```
 
-```{r, echo=FALSE}
+```{r echo=FALSE, fig.height=4}
 ppda.all <- c()
 for (tm.id in unique(events.wc.22$team.id)) {ppda.all<-c(ppda.all,get.PPDA(events.wc.22,tm.id))}
 ppda.teams <- merge(
@@ -411,7 +580,7 @@ gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=team.name)) +
 plot(gplt)
 ```
 
-```{r, echo=FALSE}
+```{r echo=FALSE, fig.height=4}
 ppda.all <- c()
 for (tm.id in unique(events.wc.18$team.id)) {ppda.all<-c(ppda.all,get.PPDA(events.wc.18,tm.id))}
 ppda.teams <- merge(
@@ -432,3 +601,5 @@ gplt <- ggplot(ppda.teams, aes(y=ppda, x=1:length(ppda.all), label=team.name)) +
   labs(title = "PPDA at World Cup 2018")
 plot(gplt)
 ```
+
+In all these tournaments, two nations consistently ranked high in PPDA: Spain and Germany. For Spain, an underrated point of their famous style, Tiki-Taka, is to immediately win the ball back once losing it (known as counterpressing), pressing the opponent high up the pitch to win the ball in attacking positions. For Germany, the style of gegenpressing is perhaps their most influential export of the last decade. The entire system revolves around getting high up the pitch and intensely pressing to win the ball in advantagous positions. One of the best managers of this era, German Jurgen Klopp said, "No playmaker in the world can be as good as a good counter-pressing situation."

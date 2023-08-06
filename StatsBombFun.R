@@ -538,16 +538,17 @@ plot.passingNetwork <- function(df, mt.id, tm) {
     }
   }
   gplt <- gplt + geom_point(data = players.locations, aes(x=location.x.avg, y=location.y.avg, size=(pass.per90/10)+10), color="dodgerblue3") 
-  gplt <- gplt + annotate("text", 
-                          x=players.locations$location.x.avg+1, 
-                          y=players.locations$location.y.avg, 
-                          label=players.locations$player.name,fontface="bold",
-                          color="black",) +
-                  annotate("text", 
-                           x=players.locations$location.x.avg+1, 
-                           y=players.locations$location.y.avg, 
-                           label=players.locations$player.name,
-                           color="white",)
+  # gplt <- gplt + annotate("text", 
+  #                         x=players.locations$location.x.avg+1, 
+  #                         y=players.locations$location.y.avg, 
+  #                         label=players.locations$player.name,fontface="bold",
+  #                         color="black",) +
+  #                 annotate("text", 
+  #                          x=players.locations$location.x.avg+1, 
+  #                          y=players.locations$location.y.avg, 
+  #                          label=players.locations$player.name,
+  #                          color="white",)
+  gplt <- gplt + geom_text_repel(data = players.locations, aes(x=location.x.avg, y=location.y.avg, label=player.name), color="white")
 # label=sub(".* ", "", players.locations$player.name)
   pass.segments["offset.x"] <- sin(pass.segments$xend-pass.segments$x)*0
   pass.segments["offset.y"] <- cos(pass.segments$yend-pass.segments$y)*0
@@ -639,7 +640,8 @@ to.per90 <- function(df, minMin=180) {
     if (name=="minutes" | 
         grepl("player",name) |
         grepl(".id",name) | 
-        grepl("position",name)) {
+        grepl("position",name) |
+        grepl("percent",name)) {
       next
     } else if (is.numeric(df.90[,name])) {
       df.90[name] <- (df.90[name]/df.90$minutes)*90
@@ -893,8 +895,8 @@ plot.directness.competition <- function(df, title="Directness") {
   gplt <- ggplot(direct, aes(x=pass.seq,y=yards.sec,label=team.name,size=(games/2)+1)) +
     theme_dark() +
     geom_point() +
-    geom_hline(aes(yintercept=mean(direct$yards.sec)), alpha=0.25) +
-    geom_vline(aes(xintercept=mean(direct$pass.seq)), alpha=0.25) +
+    geom_hline(aes(yintercept=mean(direct$yards.sec)), alpha=0.35, color="snow2") +
+    geom_vline(aes(xintercept=mean(direct$pass.seq)), alpha=0.35, color="snow2") +
     geom_text_repel(size=3, color="white") +
     xlab("Passes per sequence") +
     ylab("Progressive Yards per Second") +
@@ -904,4 +906,68 @@ plot.directness.competition <- function(df, title="Directness") {
       plot.background = element_rect(fill = 'snow2', color = 'grey')
     )
   plot(gplt)
+}
+
+get.directAttacks <- function(df) {
+  events <- df %>% filter(type.id %in% c(42,43,16,30))
+  events["distToGoal"] <- mapply(dist_to_gl, events$location.x, events$location.y)
+  direct <- events %>% group_by(possession, match_id) %>% 
+    filter(16 %in% type.id & first(location.x)<60) %>%
+    summarise(
+      team.id=possession_team.id %>% unique(),
+      team.name=possession_team.name %>% unique(),
+      directAttack = 
+        length(which(
+          (
+            distToGoal[1:length(distToGoal)-1] -
+            distToGoal[2:length(distToGoal)]
+          )
+          >0)) > length(distToGoal)*0.5,
+      goal = 97 %in% shot.outcome.id,
+      time = max(TimeInPoss)
+    )
+  return(direct)
+}
+
+angleTogl <- function(x, y) {
+  if (is.na(x) | is.null(x) | is.na(y) | is.null(y)) {
+    return(NA)
+  }
+  touchline <- 120
+  min_post <- 36
+  max_post <- 44
+  if (y >= min_post & y <= max_post) {
+    return(0.0)
+  } else if (y < min_post) {
+    return(tanh((120-x) / (y-min_post)))
+  } else if (y > max_post) {
+    return(tanh((120-x) / (y-max_post)))
+  }
+}
+
+get.angleToGoal <- function(df) {
+  events <- df %>% filter(type.id==30 | type.id==43)
+  events["angleTogl"] <- mapply(angleTogl, events$location.x, events$location.y)
+  events["pass.angle.to_goal"] <- events$pass.angle - events$angleTogl
+  events["carry.angle.to_goal"] <- tanh((events$location.x - events$carry.end_location.x) / (events$location.y - events$carry.end_location.y)) - 
+    events$angleTogl
+  return(events)
+}
+
+get.attacking_ballMovement_stats.ind <- function(df) {
+  grp <- get.angleToGoal(df) %>% filter(location.x>120*0.4) %>%
+    group_by(player.id,player.name,team.name) %>%
+    summarise(
+      pass.attacking=length(which(
+        !is.na(pass.angle.to_goal) & 
+          pass.angle.to_goal<pi/4 & pass.angle.to_goal>-1*pi/4)),
+      carry.attacking=length(which(
+        !is.na(carry.angle.to_goal) & 
+          carry.angle.to_goal<pi/4 & carry.angle.to_goal>-1*pi/4)),
+      total.attacking_moves=pass.attacking+carry.attacking,
+      pass.attacking.percent=pass.attacking/length(which(type.id==30)),
+      carry.attacking.percent=carry.attacking/length(which(type.id==43)),
+      attacking_moves.percent=total.attacking_moves/length(id)
+    )
+  return(grp)
 }
