@@ -419,7 +419,7 @@ plot(gplt)
 
 #### 2022 World Cup
 ```{r}
-gplt <- ggplot(wc.22.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+gplt <- ggplot(wc.22.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
   geom_point() +
   geom_text_repel() +
   scale_color_continuous(name="Pass vs Carry") + 
@@ -429,7 +429,7 @@ plot(gplt)
 
 #### 2018 World Cup
 ```{r}
-gplt <- ggplot(wc.18.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+gplt <- ggplot(wc.18.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
   geom_point() +
   geom_text_repel() +
   scale_color_continuous(name="Pass vs Carry") + 
@@ -440,7 +440,7 @@ plot(gplt)
 #### 2019 World Cup
 
 ```{r}
-gplt <- ggplot(wwc.19.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+gplt <- ggplot(wwc.19.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
   geom_point() +
   geom_text_repel() +
   scale_color_continuous(name="Pass vs Carry") + 
@@ -451,7 +451,7 @@ plot(gplt)
 #### 2022 Euros
 
 ```{r}
-gplt <- ggplot(weuro.22.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking.percent, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
+gplt <- ggplot(weuro.22.ind.90 %>% filter(pos_group.name!="DF"), aes(x=pass.attacking, y=carry.attacking.percent, label=player.name, shape=factor(pos_group.name), color=pass.attacking / (pass.attacking+carry.attacking))) +
   geom_point() +
   geom_text_repel() +
   scale_color_continuous(name="Pass vs Carry") + 

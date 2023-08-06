@@ -1,0 +1,51 @@
+---
+title: "EPL 15/16"
+author: "Luke Julian"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.height = 4)
+setwd("C:/users/luke/Personal_Projects/Soccer/stats_bomb/")
+source("StatsBombFun.R")
+library(ggplot2)
+library(ggrepel)
+```
+```{r Read In Event Data, results='hide', message=FALSE, warning=FALSE}
+events <- allclean(get.competitionEvents(2, 27))
+```
+```{r}
+match_info <- get.match_info(events)
+
+```
+```{r Load Progressive Stats, message=FALSE, warning=FALSE}
+carry <- get.progressive(events, "Carry")
+pPass <- get.progressive(events, "Pass")
+```
+```{r}
+ind.total <- compile.individualStats(events, carry, pPass)
+ind.total <- merge(
+  ind.total,
+  get.attacking_ballMovement_stats.ind(events) %>% filter(player.id %in% ind.total$player.id),
+  by=c("player.id","player.name","team.name")
+)
+ind.90 <- to.per90(ind.total)
+ind.90["pos_group.name"] <- ifelse(
+  ind.90$position.primary %in% get.defense.id(),
+  "DF",
+  ifelse(
+    ind.90$position.primary %in% get.midfield.id(),
+    "MF",
+    ifelse(
+      ind.90$position.primary %in% get.attack.id(),
+      "FW",
+      NA
+    )
+  )
+)
+```
+
+
+
+

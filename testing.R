@@ -202,10 +202,11 @@ plot(gplt)
 
 plot.directness.competition(events.wc.22, title = "WC 2022")
 
-write.csv(apply(events.wc.18,2,as.character), "Data/Events/wc22.csv")
-write.csv(apply(events.wc.22,2,as.character), "Data/Events/wc18.csv")
-write.csv(apply(events.wwc.19,2,as.character), "Data/Events/wwc19.csv")
-write.csv(apply(events.weuro.22,2,as.character), "Data/Events/weuro22.csv")
+write.csv(apply(events.wc.18,2,as.character), "C:/users/luke/Personal_Projects/Soccer/Data/wc22.csv")
+write.csv(apply(events.wc.22,2,as.character), "C:/users/luke/Personal_Projects/Soccer/Data/wc18.csv")
+write.csv(apply(events.wwc.19,2,as.character), "C:/users/luke/Personal_Projects/Soccer/Data/wwc19.csv")
+write.csv(apply(events.weuro.22,2,as.character), "C:/users/luke/Personal_Projects/Soccer/Data/weuro22.csv")
+write.csv(apply(events.wc.74,2,as.character), "C:/users/luke/Personal_Projects/Soccer/Data/wc74.csv")
 
 write.csv(apply(carry.wc.18,2,as.character),"Data/Prog/wc18_carry")
 write.csv(apply(pPass.wc.18,2,as.character),"Data/Prog/wc18_pPass")
